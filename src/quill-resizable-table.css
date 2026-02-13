@@ -1,0 +1,108 @@
+/* quill-resizable-table — default styles */
+
+/* Ensure tables inside the editor are visible and resizable */
+.ql-editor table {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.ql-editor table td,
+.ql-editor table th {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  position: relative;
+  min-width: 30px;
+}
+
+/* Subtle right-border highlight on hover (visual affordance) */
+.ql-editor table td:hover::after,
+.ql-editor table th:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 4px;
+  height: 100%;
+  background: rgba(0, 120, 215, 0.3);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Subtle bottom-border highlight on hover */
+.ql-editor table td:hover::before,
+.ql-editor table th:hover::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  height: 4px;
+  width: 100%;
+  background: rgba(0, 120, 215, 0.3);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ─── Context menu ──────────────────────────────────── */
+
+.qrt-context-menu {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 180px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  user-select: none;
+}
+
+.qrt-context-menu-item {
+  padding: 6px 14px;
+  cursor: pointer;
+  color: #333;
+  transition: background 0.1s;
+}
+
+.qrt-context-menu-item:hover {
+  background: #f0f4ff;
+  color: #0058b0;
+}
+
+.qrt-context-menu-item.qrt-disabled {
+  color: #bbb;
+  cursor: default;
+}
+
+.qrt-context-menu-item.qrt-disabled:hover {
+  background: transparent;
+  color: #bbb;
+}
+
+.qrt-context-menu-divider {
+  height: 1px;
+  background: #eee;
+  margin: 4px 0;
+}
+
+/* ─── Edge buttons (+) ──────────────────────────────── */
+
+.qrt-edge-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0078d7;
+  color: #fff;
+  font-size: 16px;
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.qrt-edge-btn:hover {
+  background: #005fa3;
+  transform: scale(1.15);
+  cursor: pointer;
+}

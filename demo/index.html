@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quill-resizable-table — Demo</title>
+
+  <!-- Quill 2.x from CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+
+  <!-- Our plugin styles -->
+  <link rel="stylesheet" href="../src/quill-resizable-table.css" />
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #222;
+    }
+    h1 { font-size: 1.4rem; }
+    p.hint { color: #666; font-size: 0.9rem; line-height: 1.5; }
+    #editor { min-height: 350px; }
+
+    .render-section {
+      margin-top: 32px;
+      border-top: 2px solid #e0e0e0;
+      padding-top: 16px;
+    }
+    .render-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: #555;
+    }
+    #render-view {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 16px 20px;
+      background: #fafafa;
+      min-height: 100px;
+    }
+    #render-view table {
+      border-collapse: collapse;
+      table-layout: fixed;
+      width: 100%;
+    }
+    #render-view td, #render-view th {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+    }
+
+    #html-output {
+      margin-top: 16px;
+    }
+    #html-output summary {
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #888;
+      user-select: none;
+    }
+    #html-output pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>quill-resizable-table demo</h1>
+  <p class="hint">
+    <strong>Resize:</strong> Drag the right edge of a cell to resize columns, bottom edge for rows,
+    bottom-right corner for the whole table.<br>
+    <strong>Add/Remove:</strong> Right-click any cell for a context menu. Hover near the table edges
+    to see <strong>+</strong> buttons.
+  </p>
+
+  <div id="editor"></div>
+
+  <div class="render-section">
+    <h2>Rendered Output</h2>
+    <div id="render-view"></div>
+
+    <details id="html-output">
+      <summary>View raw HTML</summary>
+      <pre id="html-code"></pre>
+    </details>
+  </div>
+
+  <script type="module">
+    import { ResizableTable } from '../src/ResizableTable.ts';
+
+    // Register the table icon before creating the editor
+    const icons = Quill.import('ui/icons');
+    icons['table'] = ResizableTable.TABLE_ICON;
+
+    Quill.register('modules/resizableTable', ResizableTable);
+
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: [
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ header: [1, 2, 3, false] }],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['link', 'blockquote', 'code-block'],
+          ['table'],
+          ['clean'],
+        ],
+        resizableTable: {
+          handleSize: 6,
+        },
+      },
+    });
+
+    // Rich sample content
+    const sampleHTML = `
+      <h1>Project Status Report</h1>
+      <p>Below is the current sprint breakdown for <strong>Q1 2026</strong>. All times are in UTC.</p>
+
+      <h2>Team Roster</h2>
+      <table>
+        <tbody>
+          <tr><td><strong>Name</strong></td><td><strong>Role</strong></td><td><strong>Status</strong></td><td><strong>Sprint Points</strong></td></tr>
+          <tr><td>Alice Johnson</td><td>Frontend Engineer</td><td>Active</td><td>13</td></tr>
+          <tr><td>Bob Martinez</td><td>UI/UX Designer</td><td>On Leave</td><td>8</td></tr>
+          <tr><td>Carol Chen</td><td>Product Manager</td><td>Active</td><td>5</td></tr>
+          <tr><td>Dave Williams</td><td>Backend Engineer</td><td>Active</td><td>21</td></tr>
+          <tr><td>Eve Thompson</td><td>QA Lead</td><td>Active</td><td>10</td></tr>
+        </tbody>
+      </table>
+
+      <p><br></p>
+      <h2>Feature Deliverables</h2>
+      <p>The following features are scoped for the current milestone:</p>
+
+      <table>
+        <tbody>
+          <tr><td><strong>Feature</strong></td><td><strong>Priority</strong></td><td><strong>ETA</strong></td></tr>
+          <tr><td>Table resize plugin</td><td>High</td><td>Feb 14</td></tr>
+          <tr><td>Dark mode support</td><td>Medium</td><td>Feb 20</td></tr>
+          <tr><td>Export to PDF</td><td>Low</td><td>Mar 1</td></tr>
+        </tbody>
+      </table>
+
+      <p><br></p>
+      <h2>Notes</h2>
+      <blockquote>Ship early, ship often. Feedback from beta testers is expected by end of week.</blockquote>
+      <ul>
+        <li>Right-click any table cell to <strong>add or remove</strong> rows and columns</li>
+        <li>Hover near the right or bottom edge of a table to see the <strong>+</strong> quick-add buttons</li>
+        <li>Drag cell borders to resize columns and rows</li>
+      </ul>
+      <p>For questions, ping <em>#project-channel</em> on Slack.</p>
+      <p><br></p>
+    `;
+    quill.clipboard.dangerouslyPasteHTML(0, sampleHTML);
+
+    // Live render view
+    const renderView = document.getElementById('render-view');
+    const htmlCode = document.getElementById('html-code');
+
+    function updateRenderView() {
+      const html = quill.root.innerHTML;
+      renderView.innerHTML = html;
+      htmlCode.textContent = html;
+    }
+
+    updateRenderView();
+    quill.on('text-change', updateRenderView);
+
+    // Also update on DOM mutations (resize changes styles, not text)
+    const observer = new MutationObserver(updateRenderView);
+    observer.observe(quill.root, {
+      attributes: true,
+      attributeFilter: ['style'],
+      subtree: true,
+      childList: true,
+    });
+  </script>
+</body>
+</html>
