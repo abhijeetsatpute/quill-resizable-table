@@ -184,21 +184,30 @@ export class ResizableTable {
   /** Update cursor style as the mouse moves over cells */
   private onEditorMouseMove(e: MouseEvent): void {
     if (this.drag) return; // already dragging
+
+    // Clear all resize cursor classes
+    const cells = (this.quill.root as HTMLElement).querySelectorAll('td.qrt-resize-col, td.qrt-resize-row, td.qrt-resize-corner, th.qrt-resize-col, th.qrt-resize-row, th.qrt-resize-corner');
+    cells.forEach(cell => {
+      cell.classList.remove('qrt-resize-col', 'qrt-resize-row', 'qrt-resize-corner');
+    });
+
     const hit = this.detectEdge(e);
-    const root = this.quill.root as HTMLElement;
-    if (!hit) {
-      root.style.cursor = '';
-      return;
-    }
+    if (!hit) return;
+
+    // Add the appropriate cursor class to the cell
+    const target = e.target as HTMLElement;
+    const cell = target.closest('td, th') as HTMLTableCellElement | null;
+    if (!cell) return;
+
     switch (hit.edge) {
       case 'col':
-        root.style.cursor = 'col-resize';
+        cell.classList.add('qrt-resize-col');
         break;
       case 'row':
-        root.style.cursor = 'row-resize';
+        cell.classList.add('qrt-resize-row');
         break;
       case 'corner':
-        root.style.cursor = 'nwse-resize';
+        cell.classList.add('qrt-resize-corner');
         break;
     }
   }
@@ -253,9 +262,7 @@ export class ResizableTable {
 
     if (edge === 'col' || edge === 'corner') {
       const newWidth = Math.max(this.options.minColumnWidth, colWidths[colIndex] + dx);
-      const updated = [...colWidths];
-      updated[colIndex] = newWidth;
-      this.applyColumnWidths(table, updated);
+      this.resizeColumnDirect(table, colIndex, newWidth);
     }
 
     if (edge === 'row' || edge === 'corner') {
@@ -379,6 +386,45 @@ export class ResizableTable {
     for (let i = 0; i < widths.length; i++) {
       (colgroup.children[i] as HTMLElement).style.width = widths[i] + 'px';
     }
+  }
+
+  /** Resize a single column independently (only that column changes width) */
+  private resizeColumnDirect(table: HTMLTableElement, colIndex: number, newWidth: number): void {
+    const doc = table.ownerDocument;
+    table.style.tableLayout = 'fixed';
+
+    // Get or create colgroup
+    let colgroup = table.querySelector('colgroup');
+    if (!colgroup) {
+      colgroup = doc.createElement('colgroup');
+      table.insertBefore(colgroup, table.firstChild);
+
+      // Initialize all cols with current widths
+      const colWidths = this.getColumnWidths(table);
+      for (const width of colWidths) {
+        const col = doc.createElement('col');
+        col.style.width = width + 'px';
+        colgroup.appendChild(col);
+      }
+    }
+
+    // Ensure we have enough col elements
+    while (colgroup.children.length < colIndex + 1) {
+      colgroup.appendChild(doc.createElement('col'));
+    }
+
+    // Resize just this column
+    (colgroup.children[colIndex] as HTMLElement).style.width = newWidth + 'px';
+
+    // Update table width to be sum of all columns
+    const allCols = Array.from(colgroup.children) as HTMLElement[];
+    const totalWidth = allCols.reduce((sum, col) => {
+      const w = col.style.width;
+      return sum + (w ? parseFloat(w) : 0);
+    }, 0);
+    table.style.width = totalWidth + 'px';
+
+    this.syncQuill();
   }
 
   /** Apply row heights directly on <tr> elements */

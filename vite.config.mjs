@@ -3,7 +3,7 @@ import { copyFileSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 
 export default defineConfig({
-  base: '/quill-resizable-table/',
+  base: process.env.NODE_ENV === 'production' ? '/quill-resizable-table/' : '/',
   root: 'demo',
   build: {
     outDir: '../gh-pages',
