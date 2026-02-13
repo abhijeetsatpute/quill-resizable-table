@@ -77,6 +77,7 @@ export class ResizableTable {
   private onDismissMenuKeyBound: (e: KeyboardEvent) => void;
   private onEditorMouseOverBound: (e: MouseEvent) => void;
   private onEditorMouseOutBound: (e: MouseEvent) => void;
+  private onScrollBound: () => void;
 
   constructor(quill: any, options: ResizableTableOptions | boolean = {}) {
     this.quill = quill;
@@ -92,6 +93,7 @@ export class ResizableTable {
     this.onDismissMenuKeyBound = this.onKeyDown.bind(this);
     this.onEditorMouseOverBound = this.onEditorMouseOver.bind(this);
     this.onEditorMouseOutBound = this.onEditorMouseOut.bind(this);
+    this.onScrollBound = this.onScroll.bind(this);
 
     this.attach();
     this.registerToolbarHandler();
@@ -128,6 +130,7 @@ export class ResizableTable {
     root.removeEventListener('mouseout', this.onEditorMouseOutBound);
     this.doc.removeEventListener('mousemove', this.onMouseMoveBound);
     this.doc.removeEventListener('mouseup', this.onMouseUpBound);
+    this.doc.removeEventListener('scroll', this.onScrollBound, true);
     this.removeOverlay();
     this.dismissContextMenu();
     this.removeEdgeButtons();
@@ -585,8 +588,39 @@ export class ResizableTable {
     this.scheduleHideEdgeButtons();
   }
 
+  /** Update button positions on scroll to keep them anchored to the table */
+  private onScroll(): void {
+    if (!this.hoveredTable) return;
+
+    const rect = this.hoveredTable.getBoundingClientRect();
+
+    if (this.addColBtn) {
+      Object.assign(this.addColBtn.style, {
+        left: (rect.right + 4) + 'px',
+        top: (rect.top + rect.height / 2 - 12) + 'px',
+      });
+    }
+
+    if (this.addRowBtn) {
+      Object.assign(this.addRowBtn.style, {
+        left: (rect.left + rect.width / 2 - 12) + 'px',
+        top: (rect.bottom + 4) + 'px',
+      });
+    }
+
+    if (this.deleteTableBtn) {
+      Object.assign(this.deleteTableBtn.style, {
+        right: (window.innerWidth - rect.right + 4) + 'px',
+        top: (rect.top - 20) + 'px',
+      });
+    }
+  }
+
   private showEdgeButtons(table: HTMLTableElement): void {
     const rect = table.getBoundingClientRect();
+
+    // Attach scroll listener to reposition buttons
+    this.doc.addEventListener('scroll', this.onScrollBound, true);
 
     // + Column button (right edge, vertically centered)
     this.addColBtn = this.doc.createElement('div');
@@ -684,6 +718,8 @@ export class ResizableTable {
     if (this.addColBtn) { this.addColBtn.remove(); this.addColBtn = null; }
     if (this.addRowBtn) { this.addRowBtn.remove(); this.addRowBtn = null; }
     if (this.deleteTableBtn) { this.deleteTableBtn.remove(); this.deleteTableBtn = null; }
+    // Remove scroll listener
+    this.doc.removeEventListener('scroll', this.onScrollBound, true);
   }
 
   // ─── Table creation ─────────────────────────────────────────
