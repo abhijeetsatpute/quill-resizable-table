@@ -1,7 +1,7 @@
 {
   "name": "quill-resizable-table",
-  "version": "1.0.0",
-  "description": "A Quill.js plugin for drag-resizable tables — resize columns, rows, and the entire table",
+  "version": "1.1.0",
+  "description": "A Quill.js plugin for drag-resizable tables — resize columns, rows, and the entire table. Includes table deletion and comprehensive test coverage.",
   "main": "dist/quill-resizable-table.cjs.js",
   "module": "dist/quill-resizable-table.esm.js",
   "browser": "dist/quill-resizable-table.umd.js",

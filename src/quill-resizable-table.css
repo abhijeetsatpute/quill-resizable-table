@@ -145,3 +145,29 @@
   transform: scale(1.15);
   cursor: pointer;
 }
+
+/* ─── Delete table button ──────────────────────────── */
+
+.qrt-delete-table-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 18px;
+  line-height: 28px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qrt-delete-table-btn:hover {
+  background: #b71c1c;
+  transform: scale(1.15);
+  cursor: pointer;
+}

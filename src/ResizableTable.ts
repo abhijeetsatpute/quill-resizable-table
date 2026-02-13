@@ -63,6 +63,7 @@ export class ResizableTable {
   // Edge buttons
   private addColBtn: HTMLDivElement | null = null;
   private addRowBtn: HTMLDivElement | null = null;
+  private deleteTableBtn: HTMLDivElement | null = null;
   private hoveredTable: HTMLTableElement | null = null;
   private hideEdgeBtnTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -480,7 +481,8 @@ export class ResizableTable {
       { label: 'Delete Column', action: () => this.deleteColumn(table, colIndex), dividerAfter: true, disabled: colCount <= 1 },
       { label: 'Insert Row Above', action: () => this.insertRow(table, rowIndex, 'before') },
       { label: 'Insert Row Below', action: () => this.insertRow(table, rowIndex, 'after') },
-      { label: 'Delete Row', action: () => this.deleteRow(table, rowIndex), disabled: rowCount <= 1 },
+      { label: 'Delete Row', action: () => this.deleteRow(table, rowIndex), dividerAfter: true, disabled: rowCount <= 1 },
+      { label: 'Delete Table', action: () => this.deleteTable(table) },
     ];
 
     for (const item of items) {
@@ -573,7 +575,8 @@ export class ResizableTable {
     if (related && (
       this.hoveredTable.contains(related) ||
       this.addColBtn?.contains(related) ||
-      this.addRowBtn?.contains(related)
+      this.addRowBtn?.contains(related) ||
+      this.deleteTableBtn?.contains(related)
     )) {
       return;
     }
@@ -645,12 +648,42 @@ export class ResizableTable {
       this.scheduleHideEdgeButtons();
     });
     this.doc.body.appendChild(this.addRowBtn);
+
+    // Delete Table button (top-right corner)
+    this.deleteTableBtn = this.doc.createElement('div');
+    this.deleteTableBtn.className = 'qrt-delete-table-btn';
+    this.deleteTableBtn.innerHTML = '✕';
+    this.deleteTableBtn.title = 'Delete table';
+    Object.assign(this.deleteTableBtn.style, {
+      position: 'fixed',
+      right: (window.innerWidth - rect.right + 4) + 'px',
+      top: (rect.top - 20) + 'px',
+      zIndex: '10000',
+      cursor: 'pointer',
+    });
+    this.deleteTableBtn.addEventListener('mousedown', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.cancelHideEdgeButtons();
+      this.deleteTable(table);
+      this.removeEdgeButtons();
+    });
+    this.deleteTableBtn.addEventListener('mouseenter', () => {
+      this.cancelHideEdgeButtons();
+    });
+    this.deleteTableBtn.addEventListener('mouseleave', (ev) => {
+      const related = ev.relatedTarget as HTMLElement | null;
+      if (related && (table.contains(related) || this.addColBtn?.contains(related) || this.addRowBtn?.contains(related))) return;
+      this.scheduleHideEdgeButtons();
+    });
+    this.doc.body.appendChild(this.deleteTableBtn);
   }
 
   private removeEdgeButtons(): void {
     this.cancelHideEdgeButtons();
     if (this.addColBtn) { this.addColBtn.remove(); this.addColBtn = null; }
     if (this.addRowBtn) { this.addRowBtn.remove(); this.addRowBtn = null; }
+    if (this.deleteTableBtn) { this.deleteTableBtn.remove(); this.deleteTableBtn = null; }
   }
 
   // ─── Table creation ─────────────────────────────────────────
@@ -761,6 +794,12 @@ export class ResizableTable {
   public deleteRow(table: HTMLTableElement, rowIndex: number): void {
     if (table.rows.length <= 1) return;
     table.deleteRow(rowIndex);
+    this.syncQuill();
+  }
+
+  /** Delete the entire table */
+  public deleteTable(table: HTMLTableElement): void {
+    table.remove();
     this.syncQuill();
   }
 }

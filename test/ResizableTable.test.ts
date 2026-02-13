@@ -26,7 +26,7 @@ function createTable(doc: Document): { container: HTMLDivElement; table: HTMLTab
 function fire(
   target: Element,
   type: string,
-  opts: { clientX?: number; clientY?: number } = {},
+  opts: { clientX?: number; clientY?: number; relatedTarget?: Element } = {},
 ) {
   const event = new MouseEvent(type, {
     bubbles: true,
@@ -34,6 +34,15 @@ function fire(
     clientX: opts.clientX ?? 0,
     clientY: opts.clientY ?? 0,
   });
+
+  // Manually set relatedTarget since it's not in the MouseEventInit
+  if (opts.relatedTarget) {
+    Object.defineProperty(event, 'relatedTarget', {
+      value: opts.relatedTarget,
+      enumerable: true,
+    });
+  }
+
   target.dispatchEvent(event);
   return event;
 }
@@ -369,6 +378,51 @@ describe('ResizableTable', () => {
     });
   });
 
+  describe('deleteTable', () => {
+    it('should remove the entire table from the DOM', () => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      const plugin = new ResizableTable(quill);
+
+      expect(container.querySelector('table')).not.toBeNull();
+      plugin.deleteTable(table);
+      expect(container.querySelector('table')).toBeNull();
+    });
+
+    it('should remove table that is not inside a container', () => {
+      const table = doc.createElement('table');
+      const tbody = doc.createElement('tbody');
+      const tr = doc.createElement('tr');
+      const td = doc.createElement('td');
+      td.textContent = 'Test';
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      table.appendChild(tbody);
+      doc.body.appendChild(table);
+
+      const quill = createMockQuill(doc.body);
+      const plugin = new ResizableTable(quill);
+
+      expect(doc.querySelector('table')).not.toBeNull();
+      plugin.deleteTable(table);
+      expect(doc.querySelector('table')).toBeNull();
+    });
+
+    it('should work when called multiple times with different tables', () => {
+      const { container: container1, table: table1 } = createTable(doc);
+      const { container: container2, table: table2 } = createTable(doc);
+      const quill = createMockQuill(container1);
+      const plugin = new ResizableTable(quill);
+
+      plugin.deleteTable(table1);
+      expect(container1.querySelector('table')).toBeNull();
+      expect(container2.querySelector('table')).not.toBeNull();
+
+      plugin.deleteTable(table2);
+      expect(container2.querySelector('table')).toBeNull();
+    });
+  });
+
   describe('context menu', () => {
     it('should show context menu on right-click inside a cell', () => {
       const { container, table } = createTable(doc);
@@ -381,7 +435,45 @@ describe('ResizableTable', () => {
       const menu = doc.querySelector('.qrt-context-menu');
       expect(menu).not.toBeNull();
       const items = menu!.querySelectorAll('.qrt-context-menu-item');
-      expect(items.length).toBe(6);
+      expect(items.length).toBe(7); // includes Delete Table
+    });
+
+    it('should include Delete Table option in context menu', () => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'contextmenu', { clientX: 50, clientY: 20 });
+
+      const menu = doc.querySelector('.qrt-context-menu');
+      expect(menu).not.toBeNull();
+      const items = Array.from(menu!.querySelectorAll('.qrt-context-menu-item'));
+      const deleteTableItem = items.find(item => item.textContent === 'Delete Table');
+      expect(deleteTableItem).not.toBeUndefined();
+    });
+
+    it('should delete table when Delete Table is clicked from context menu', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'contextmenu', { clientX: 50, clientY: 20 });
+
+      const menu = doc.querySelector('.qrt-context-menu');
+      const items = Array.from(menu!.querySelectorAll('.qrt-context-menu-item'));
+      const deleteTableItem = items.find(item => item.textContent === 'Delete Table') as HTMLElement | undefined;
+
+      expect(deleteTableItem).not.toBeUndefined();
+
+      // The dismiss listener is attached via setTimeout(fn, 0), so wait a tick
+      setTimeout(() => {
+        fire(deleteTableItem!, 'mousedown');
+        // Table should be deleted
+        expect(container.querySelector('table')).toBeNull();
+        done();
+      }, 10);
     });
 
     it('should dismiss context menu on outside click', (done) => {
@@ -409,6 +501,341 @@ describe('ResizableTable', () => {
 
       fire(container, 'contextmenu', { clientX: 10, clientY: 10 });
       expect(doc.querySelector('.qrt-context-menu')).toBeNull();
+    });
+  });
+
+  describe('edge buttons (delete table button)', () => {
+    it('should show delete button when hovering over a table', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn');
+        expect(deleteBtn).not.toBeNull();
+        expect(deleteBtn?.textContent).toBe('✕');
+        done();
+      }, 10);
+    });
+
+    it('should show add column and add row buttons when hovering over a table', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const addColBtn = doc.querySelectorAll('.qrt-edge-btn')[0];
+        const addRowBtn = doc.querySelectorAll('.qrt-edge-btn')[1];
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn');
+        expect(addColBtn).not.toBeUndefined();
+        expect(addRowBtn).not.toBeUndefined();
+        expect(deleteBtn).not.toBeNull();
+        done();
+      }, 10);
+    });
+
+    it('should delete table when delete button is clicked', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn') as HTMLElement | null;
+        expect(deleteBtn).not.toBeNull();
+        expect(container.querySelector('table')).not.toBeNull();
+
+        fire(deleteBtn!, 'mousedown');
+
+        expect(container.querySelector('table')).toBeNull();
+        expect(doc.querySelector('.qrt-delete-table-btn')).toBeNull();
+        done();
+      }, 10);
+    });
+
+    it('should remove buttons when mouse leaves the table', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+
+        // Mouse out of table
+        fire(td, 'mouseout', { relatedTarget: container });
+
+        // Wait for the hide timer
+        setTimeout(() => {
+          expect(doc.querySelector('.qrt-delete-table-btn')).toBeNull();
+          done();
+        }, 250);
+      }, 10);
+    });
+
+    it('should keep buttons visible when mouse moves between table and delete button', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn') as HTMLElement | null;
+        expect(deleteBtn).not.toBeNull();
+
+        // Simulate mouseenter on delete button
+        fire(deleteBtn!, 'mouseenter');
+
+        // Buttons should still be visible
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+        done();
+      }, 10);
+    });
+
+    it('should keep buttons visible when hovering between table and other buttons', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn') as HTMLElement | null;
+        expect(deleteBtn).not.toBeNull();
+
+        // Simulate mouseleave from delete button towards table
+        fire(deleteBtn!, 'mouseleave', { relatedTarget: td });
+
+        // Buttons should still be visible
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+        done();
+      }, 10);
+    });
+
+    it('should add column button work correctly', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      expect(table.rows[0].cells.length).toBe(3);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const addColBtn = doc.querySelectorAll('.qrt-edge-btn')[0] as HTMLElement;
+        fire(addColBtn, 'mousedown');
+
+        // Column should be added
+        expect(table.rows[0].cells.length).toBe(4);
+        done();
+      }, 10);
+    });
+
+    it('should add row button work correctly', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      expect(table.rows.length).toBe(2);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const addRowBtn = doc.querySelectorAll('.qrt-edge-btn')[1] as HTMLElement;
+        fire(addRowBtn, 'mousedown');
+
+        // Row should be added
+        expect(table.rows.length).toBe(3);
+        done();
+      }, 10);
+    });
+
+    it('should handle delete button mouseenter correctly', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn') as HTMLElement | null;
+        expect(deleteBtn).not.toBeNull();
+
+        // Trigger mouseenter
+        fire(deleteBtn!, 'mouseenter');
+
+        // Button should still exist
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+        done();
+      }, 10);
+    });
+
+    it('should handle delete button mouseleave with button as related target', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn') as HTMLElement | null;
+        const addColBtn = doc.querySelectorAll('.qrt-edge-btn')[0] as HTMLElement | null;
+        expect(deleteBtn).not.toBeNull();
+
+        // Trigger mouseleave towards another button
+        fire(deleteBtn!, 'mouseleave', { relatedTarget: addColBtn || undefined });
+
+        // Buttons should still exist
+        setTimeout(() => {
+          expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+          done();
+        }, 10);
+      }, 10);
+    });
+
+    it('should remove buttons when hovering away from all buttons', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn') as HTMLElement | null;
+        expect(deleteBtn).not.toBeNull();
+
+        // Trigger mouseleave towards non-related element
+        fire(deleteBtn!, 'mouseleave', { relatedTarget: container });
+
+        // Wait for the hide timer
+        setTimeout(() => {
+          expect(doc.querySelector('.qrt-delete-table-btn')).toBeNull();
+          done();
+        }, 250);
+      }, 10);
+    });
+
+    it('should re-enter table while buttons visible', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+
+        // Mouse out then back in
+        fire(td, 'mouseout', { relatedTarget: container });
+
+        setTimeout(() => {
+          // Re-enter same table
+          fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+          setTimeout(() => {
+            // Buttons should still be visible
+            expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+            done();
+          }, 10);
+        }, 10);
+      }, 10);
+    });
+
+    it('should keep delete button visible when leaving table towards delete button', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const deleteBtn = doc.querySelector('.qrt-delete-table-btn') as HTMLElement | null;
+        expect(deleteBtn).not.toBeNull();
+
+        // Mouse out towards delete button
+        fire(td, 'mouseout', { relatedTarget: deleteBtn || undefined });
+
+        // Buttons should still be visible (not scheduled for hiding)
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+        done();
+      }, 10);
+    });
+
+    it('should keep delete button visible when leaving table towards add column button', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const addColBtn = doc.querySelectorAll('.qrt-edge-btn')[0] as HTMLElement | null;
+        expect(addColBtn).not.toBeNull();
+
+        // Mouse out towards add column button
+        fire(td, 'mouseout', { relatedTarget: addColBtn || undefined });
+
+        // Buttons should still be visible
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+        done();
+      }, 10);
+    });
+
+    it('should keep delete button visible when leaving table towards add row button', (done) => {
+      const { container, table } = createTable(doc);
+      const quill = createMockQuill(container);
+      stubCellGeometry(table, 100, 30);
+      const _plugin = new ResizableTable(quill);
+
+      const td = table.rows[0].cells[0];
+      fire(td, 'mouseover', { clientX: 50, clientY: 20 });
+
+      setTimeout(() => {
+        const addRowBtn = doc.querySelectorAll('.qrt-edge-btn')[1] as HTMLElement | null;
+        expect(addRowBtn).not.toBeNull();
+
+        // Mouse out towards add row button
+        fire(td, 'mouseout', { relatedTarget: addRowBtn || undefined });
+
+        // Buttons should still be visible
+        expect(doc.querySelector('.qrt-delete-table-btn')).not.toBeNull();
+        done();
+      }, 10);
     });
   });
 });
