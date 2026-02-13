@@ -21,12 +21,15 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build
+      - name: Build library
         run: npm run build
+
+      - name: Build demo for GitHub Pages
+        run: npx vite build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./gh-pages
           cname: false
