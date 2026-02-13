@@ -1,5 +1,4 @@
 {
-  "type": "module",
   "name": "quill-resizable-table",
   "version": "1.0.0",
   "description": "A Quill.js plugin for drag-resizable tables — resize columns, rows, and the entire table",
@@ -13,7 +12,7 @@
     "src"
   ],
   "scripts": {
-    "build": "rollup -c && npm run build:css",
+    "build": "rollup -c rollup.config.mjs && npm run build:css",
     "build:css": "node scripts/copy-css.js",
     "dev": "vite demo",
     "test": "jest --config jest.config.js",
