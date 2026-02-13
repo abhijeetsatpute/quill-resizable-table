@@ -13,11 +13,15 @@ export default defineConfig({
       name: 'copy-library',
       apply: 'build',
       async generateBundle() {
-        // Copy the built CSS and JS to gh-pages
+        // Copy the built CSS and UMD JS to gh-pages
         mkdirSync(resolve('gh-pages'), { recursive: true });
         copyFileSync(
           resolve('dist/quill-resizable-table.css'),
           resolve('gh-pages/quill-resizable-table.css')
+        );
+        copyFileSync(
+          resolve('dist/quill-resizable-table.umd.js'),
+          resolve('gh-pages/quill-resizable-table-umd.js')
         );
       },
     },
