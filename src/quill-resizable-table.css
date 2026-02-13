@@ -14,6 +14,23 @@
   min-width: 30px;
 }
 
+/* Resize cursor indicators */
+.ql-editor table td,
+.ql-editor table th {
+  background-image:
+    linear-gradient(to right, transparent 97%, rgba(0, 120, 215, 0.5) 97%),
+    linear-gradient(to bottom, transparent 97%, rgba(0, 120, 215, 0.5) 97%);
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: 100% 100%;
+}
+
+/* Right-edge hover (column resize) */
+.ql-editor table td:hover,
+.ql-editor table th:hover {
+  cursor: col-resize;
+}
+
 /* Subtle right-border highlight on hover (visual affordance) */
 .ql-editor table td:hover::after,
 .ql-editor table th:hover::after {
@@ -40,6 +57,18 @@
   background: rgba(0, 120, 215, 0.3);
   pointer-events: none;
   z-index: 1;
+}
+
+/* Row resize cursor for bottom edge of last row */
+.ql-editor table tr:last-child td:hover,
+.ql-editor table tr:last-child th:hover {
+  cursor: row-resize;
+}
+
+/* Table resize cursor for bottom-right corner */
+.ql-editor table tr:last-child td:last-child:hover,
+.ql-editor table tr:last-child th:last-child:hover {
+  cursor: nwse-resize;
 }
 
 /* ─── Context menu ──────────────────────────────────── */
