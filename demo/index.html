@@ -94,8 +94,15 @@
     </details>
   </div>
 
+  <!-- Library CSS -->
+  <link rel="stylesheet" href="./quill-resizable-table.css">
+
   <script type="module">
-    import { ResizableTable } from '../src/ResizableTable.ts';
+    // Dynamic import for dev (from src) or production (from dist)
+    const isDev = import.meta.env.DEV;
+    const ResizableTable = isDev
+      ? (await import('../src/ResizableTable.ts')).ResizableTable
+      : (await import('../dist/quill-resizable-table.esm.js')).ResizableTable;
 
     // Register the table icon before creating the editor
     const icons = Quill.import('ui/icons');
