@@ -2,6 +2,8 @@
 
 A [Quill.js](https://quilljs.com/) plugin for drag-resizable tables -- resize columns, rows, and the entire table. Add or remove rows and columns with a right-click context menu or floating edge buttons.
 
+**[📺 Live Demo](https://abhijeetsatpute.github.io/quill-resizable-table/)**
+
 <p align="center">
   <img src="" alt="quill-resizable-table demo" width="700" />
   <br />
