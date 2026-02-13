@@ -4,11 +4,9 @@ A [Quill.js](https://quilljs.com/) plugin for drag-resizable tables -- resize co
 
 **[📺 Live Demo](https://abhijeetsatpute.github.io/quill-resizable-table/)**
 
-<p align="center">
-  <img src="" alt="quill-resizable-table demo" width="700" />
-  <br />
-  <em><!-- Add your demo GIF here --></em>
-</p>
+
+![quill-resizable-table](https://github.com/user-attachments/assets/fb98a633-938e-431d-94ac-e0206999b3cb)
+
 
 ---
 
